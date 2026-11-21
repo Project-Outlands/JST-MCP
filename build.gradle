@@ -1,0 +1,130 @@
+plugins {
+    id 'java'
+    id 'maven-publish'
+    id 'com.gradleup.shadow' version "9.6.1"
+    id 'dev.lukebemish.immaculate' version '0.1.16'
+    id 'net.neoforged.gradleutils' version "${gradleutils_version}"
+    id 'net.neoforged.gradleutils.immaculate' version "${gradleutils_version}"
+}
+
+group = 'top.outlands'
+
+gradleutils.version {
+    branches.suffixBranch()
+}
+
+println "Version: ${project.version = gradleutils.version}"
+
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(21)
+    withSourcesJar()
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 21
+    options.encoding = 'UTF-8'
+}
+
+configurations {
+    jstHost {
+        canBeConsumed = false
+        canBeResolved = true
+        transitive = false
+    }
+    compileOnly.extendsFrom jstHost
+}
+
+dependencies {
+    jstHost "net.neoforged.jst:jst-cli-bundle:${jst_version}@jar"
+    implementation "net.neoforged:srgutils:${srgutils_version}"
+    implementation "org.apache.commons:commons-csv:${commons_csv_version}"
+
+    testImplementation platform("org.junit:junit-bom:${junit_version}")
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+jar {
+    archiveClassifier = 'thin'
+}
+
+shadowJar {
+    archiveClassifier = ''
+    manifest {
+        attributes 'Main-Class': 'top.outlands.jst.mcp.export.ExportMain',
+                'Implementation-Version': project.version.toString()
+    }
+
+    relocate 'net.neoforged.srgutils', 'top.outlands.jst.mcp.internal.srgutils'
+    relocate 'org.apache.commons', 'top.outlands.jst.mcp.internal.commons'
+    exclude 'module-info.class', 'META-INF/versions/**/module-info.class'
+
+    from('LICENSE') {
+        into 'META-INF'
+    }
+    filesMatching(['META-INF/LICENSE.txt', 'META-INF/NOTICE.txt']) {
+        duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    }
+    append 'META-INF/LICENSE.txt'
+    append 'META-INF/NOTICE.txt'
+}
+
+tasks.named('assemble') {
+    dependsOn tasks.named('shadowJar')
+}
+
+def pluginJar = tasks.named('shadowJar').flatMap { it.archiveFile }
+def jstHost = configurations.jstHost
+
+test {
+    useJUnitPlatform()
+    inputs.file(pluginJar)
+    inputs.files(jstHost)
+    doFirst {
+        systemProperty 'mcp.jar', pluginJar.get().asFile.absolutePath
+        systemProperty 'jst.jar', jstHost.singleFile.absolutePath
+    }
+}
+
+publishing {
+    publications {
+        mcp(MavenPublication) {
+            artifact shadowJar
+            artifact sourcesJar
+            pom {
+                name = 'JST-MCP'
+                description = 'Legacy MCP source transformation and standalone mapping export.'
+                url = 'https://github.com/Project-Outlands/JST-MCP'
+
+                scm {
+                    url = 'https://github.com/Project-Outlands/JST-MCP'
+                    connection = 'scm:git:git://github.com/Project-Outlands/JST-MCP.git'
+                    developerConnection = 'scm:git:git@github.com:Project-Outlands/JST-MCP.git'
+                }
+
+                issueManagement {
+                    system = 'github'
+                    url = 'https://github.com/Project-Outlands/JST-MCP/issues'
+                }
+
+                licenses {
+                    license {
+                        name = 'LGPLv2.1'
+                        url = 'https://www.gnu.org/licenses/old-licenses/lgpl-2.1.txt'
+                    }
+                }
+            }
+        }
+    }
+
+    repositories {
+        maven {
+            name = 'Outlands'
+            url = 'https://maven.outlands.top/releases'
+            credentials {
+                username = providers.gradleProperty('outlandsUsername').orNull ?: System.getenv('OUTLANDS_USERNAME')
+                password = providers.gradleProperty('outlandsPassword').orNull ?: System.getenv('OUTLANDS_PASSWORD')
+            }
+        }
+    }
+}
