@@ -34,8 +34,8 @@ jobs:
       - name: Publish to Maven
         run: ./gradlew publish --no-daemon --no-configuration-cache
         env:
-          MAVEN_USER: ${{ secrets.OUTLANDS_MAVEN_USER }}
-          MAVEN_PASSWORD: ${{ secrets.OUTLANDS_MAVEN_PASSWORD }}
+          OUTLANDS_USERNAME: ${{ secrets.OUTLANDS_USERNAME }}
+          OUTLANDS_PASSWORD: ${{ secrets.OUTLANDS_PASSWORD }}
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
