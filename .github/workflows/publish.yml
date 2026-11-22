@@ -42,7 +42,7 @@ jobs:
         with:
           tag_name: ${{ steps.version.outputs.version }}
           target_commitish: ${{ github.sha }}
-          name: MCInjector ${{ steps.version.outputs.version }}
+          name: JST-MCP ${{ steps.version.outputs.version }}
           generate_release_notes: true
           files: build/libs/*.jar
           fail_on_unmatched_files: true
@@ -50,6 +50,6 @@ jobs:
       - name: Upload jars
         uses: actions/upload-artifact@v7
         with:
-          name: mcinjector
+          name: jst-mcp
           path: build/libs/*.jar
           if-no-files-found: error

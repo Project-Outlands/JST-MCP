@@ -11,6 +11,7 @@ group = 'top.outlands'
 
 gradleutils.version {
     branches.suffixBranch()
+    tags.includeLightweightTags.set(false)
 }
 
 println "Version: ${project.version = gradleutils.version}"
